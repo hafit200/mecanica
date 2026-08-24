@@ -57,5 +57,5 @@ public abstract class Vehiculo {
         this.placa = placa;
     }
 
-    public abstract double CalcularRecargoInfraestructura();
+    public abstract double CalcularRecargo();
 }
