@@ -8,6 +8,9 @@ package modelo;
  *
  * @author Asus
  */
-public class Cliente {
+public class Cliente extends Persona{
+
+    public Cliente() {
+    }
     
 }

@@ -6,67 +6,56 @@ package controlador;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import modelo.Cliente;
 import vista.VistaFacturaMecanica;
 
-/**
- *
- * @author Asus
- */
 public class ClienteControlador {
+
     private Cliente c;
     private VistaFacturaMecanica vfm;
     private ArrayList<String[]> listaClientes;
-    
-    ConexionBDD conectar = new ConexionBDD();
-    //CLASE QUE ME PERMITA CONECTARME DIRECTAMENTE A MYSQL
-    Connection conectado = (Connection) conectar.conectar();
-    //CLASE QUE ME PERMITE EJECUTAR MI SENTENCIA SQL
-    PreparedStatement ejecutar;
-    //OBTENER RESULTADOS DE LA CONSULTA
-    ResultSet resultado;
 
-    public ClienteControlador() {
-    }
-    
-    
+    ConexionBDD conectar = new ConexionBDD();
+    Connection conectado = (Connection) conectar.conectar();
+
+    public ClienteControlador() {}
 
     public ClienteControlador(Cliente c, VistaFacturaMecanica vfm) {
         this.c = c;
         this.vfm = vfm;
     }
-    
-    public ClienteControlador(VistaFacturaMecanica vfm) {
-    this.vfm = vfm;
-    this.listaClientes = obtenerClientes();
-    
-    // Carga los clientes
-    CargarClientes(this.listaClientes);
-    
-    // ENLAZA EL EVENTO DIRECTAMENTE
-    this.vfm.getCmbCliente().addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            int index = vfm.getCmbCliente().getSelectedIndex();
-            System.out.println("-> Clic detectado en combo. Indice: " + index);
-            
-            if (index > 0 && listaClientes != null && !listaClientes.isEmpty()) {
-                String[] seleccionado = listaClientes.get(index - 1);
-                System.out.println("ID Cliente: " + seleccionado[0]);
-                
-                vfm.getTxtCedula().setText(seleccionado[2]);
-                vfm.getTxtCorreo().setText(seleccionado[3]);
-                vfm.getTxtTelefono().setText(seleccionado[4]);
-                vfm.getTxtDireccion().setText(seleccionado[5]);
+
+    public ClienteControlador(VistaFacturaMecanica vfm, VehiculoControlador vc) {
+        this.vfm = vfm;
+        this.listaClientes = obtenerClientes();
+
+        CargarClientes(this.listaClientes);
+
+        this.vfm.getCmbCliente().addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int index = vfm.getCmbCliente().getSelectedIndex();
+                if (index >= 0 && listaClientes != null && !listaClientes.isEmpty()) {
+                    String[] seleccionado = listaClientes.get(index);
+
+                    // Mapeo de campos a la vista
+                    vfm.getTxtCedula().setText(seleccionado[2]);    // Posición 2: cedula
+                    vfm.getTxtTelefono().setText(seleccionado[4]);  // Posición 4: celular
+                    vfm.getTxtDireccion().setText(seleccionado[5]); // Posición 5: direccion
+                    vfm.getTxtCorreo().setText(seleccionado[3]);    // Posición 3: email
+
+                    // Cargar placas del cliente seleccionado
+                    int idCliente = Integer.parseInt(seleccionado[0]); // Posición 0: ID_cliente
+                    vc.cargarVehiculosPorCliente(idCliente);
+                }
             }
-        }
-    });
-}
+        });
+    }
 
     private void limpiarCampos() {
         vfm.getTxtCedula().setText("");
@@ -74,15 +63,14 @@ public class ClienteControlador {
         vfm.getTxtTelefono().setText("");
         vfm.getTxtDireccion().setText("");
     }
-    
-    //Obtener Clientes
+
+    // Obtener Clientes usando Stored Procedure
     public ArrayList<String[]> obtenerClientes() {
         ArrayList<String[]> lregistros = new ArrayList<>();
-        String sentenciaSQL = "SELECT ID_cliente, Nombre, cedula, email, celular, direccion FROM clientes";
+        String sentenciaSQL = "{CALL sp_obtener_clientes()}";
 
-        try {
-            PreparedStatement ejecutar = conectado.prepareStatement(sentenciaSQL);
-            ResultSet res = ejecutar.executeQuery();
+        try (CallableStatement ejecutar = conectado.prepareCall(sentenciaSQL);
+             ResultSet res = ejecutar.executeQuery()) {
 
             while (res.next()) {
                 String[] listaCliente = new String[6];
@@ -96,31 +84,21 @@ public class ClienteControlador {
                 lregistros.add(listaCliente);
             }
 
-            res.close();
-            ejecutar.close();
         } catch (SQLException e) {
-            System.out.println("Error al obtener clientes: " + e.getMessage());
+            System.out.println("Error al ejecutar el SP de clientes: " + e.getMessage());
         }
 
         return lregistros;
     }
 
-    //Cargar clientes
+    // Cargar clientes en el JComboBox
     public void CargarClientes(ArrayList<String[]> lC) {
-    // 1. Limpiamos el combo usando el getter de la vista
-    vfm.getCmbCliente().removeAllItems();
-    
-    // Opción por defecto
-    
+        vfm.getCmbCliente().removeAllItems();
 
-    // 2. Validamos que la lista no esté vacía
-    if (lC != null && !lC.isEmpty()) {
-        for (String[] cliente : lC) {
-            // Usamos vfm.getCmbCliente() para agregar el item
-            // cliente[1] es el Nombre, cliente[2] es la Cédula
-            vfm.getCmbCliente().addItem(cliente[1]);
+        if (lC != null && !lC.isEmpty()) {
+            for (String[] cliente : lC) {
+                vfm.getCmbCliente().addItem(cliente[1]); // Muestra el Nombre del cliente
+            }
         }
     }
-    }
 }
-
