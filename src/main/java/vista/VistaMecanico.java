@@ -4,6 +4,7 @@
  */
 package vista;
 
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
@@ -40,6 +41,7 @@ public class VistaMecanico extends javax.swing.JFrame {
         jLabel13 = new javax.swing.JLabel();
         txtSubtotalMecanico = new javax.swing.JTextField();
         jLabel14 = new javax.swing.JLabel();
+        btnGuardarMecanico = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -56,6 +58,8 @@ public class VistaMecanico extends javax.swing.JFrame {
         txtSubtotalMecanico.setEditable(false);
 
         jLabel14.setText("SUBTOTAL M.");
+
+        btnGuardarMecanico.setText("GUARDAR");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -85,6 +89,10 @@ public class VistaMecanico extends javax.swing.JFrame {
                     .addComponent(txtSubtotalMecanico, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel14, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
+            .addGroup(layout.createSequentialGroup()
+                .addGap(214, 214, 214)
+                .addComponent(btnGuardarMecanico)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -101,7 +109,9 @@ public class VistaMecanico extends javax.swing.JFrame {
                     .addComponent(spnHorasTrabajo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(cmbNivelTrabajo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(txtSubtotalMecanico, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btnGuardarMecanico)
+                .addContainerGap(7, Short.MAX_VALUE))
         );
 
         pack();
@@ -163,10 +173,19 @@ public class VistaMecanico extends javax.swing.JFrame {
     public void setTxtSubtotalMecanico(JTextField txtSubtotalMecanico) {
         this.txtSubtotalMecanico = txtSubtotalMecanico;
     }
+
+    public JButton getBtnGuardarMecanico() {
+        return btnGuardarMecanico;
+    }
+
+    public void setBtnGuardarMecanico(JButton btnGuardarMecanico) {
+        this.btnGuardarMecanico = btnGuardarMecanico;
+    }
     
     
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnGuardarMecanico;
     private javax.swing.JComboBox<String> cmbMecanico;
     private javax.swing.JComboBox<String> cmbNivelTrabajo;
     private javax.swing.JLabel jLabel10;

@@ -6,6 +6,9 @@ package controlador;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import vista.VistaFacturaMecanica;
@@ -17,6 +20,8 @@ import vista.VistaFacturaMecanica;
 public class DetalleFacturaControlador {
 
     private VistaFacturaMecanica vfm;
+    private ConexionBDD conectar = new ConexionBDD();
+    private Connection conectado = (Connection) conectar.conectar();
 
     public DetalleFacturaControlador() {}
 
@@ -109,4 +114,39 @@ public class DetalleFacturaControlador {
             JOptionPane.showMessageDialog(vfm, "Error al agregar el repuesto a la tabla: " + ex.getMessage());
         }
     }
+
+    // --- MÉTODO PARA GUARDAR LOS DETALLES DE LA TABLA EN LA BDD ---
+    public boolean guardarDetalles(int idOrdenGenerado, String detalleServicio) {
+    DefaultTableModel modeloTabla = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
+
+    if (modeloTabla.getRowCount() == 0) {
+        JOptionPane.showMessageDialog(vfm, "Debe agregar al menos un repuesto a la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
+        return false;
+    }
+
+    String sqlDetalle = "{CALL sp_guardar_detalle_orden(?, ?, ?, ?, ?)}";
+
+    try (CallableStatement csDetalle = conectado.prepareCall(sqlDetalle)) {
+        for (int i = 0; i < modeloTabla.getRowCount(); i++) {
+            int idRepuesto = 1; // Ajusta según obtengas el ID real del repuesto
+            int cantidad = Integer.parseInt(modeloTabla.getValueAt(i, 2).toString());
+            double subtotal = Double.parseDouble(modeloTabla.getValueAt(i, 3).toString().replace(",", "."));
+
+            csDetalle.setInt(1, idOrdenGenerado);
+            csDetalle.setInt(2, idRepuesto);
+            csDetalle.setInt(3, cantidad);
+            csDetalle.setDouble(4, subtotal);
+            csDetalle.setString(5, detalleServicio); // Envía el texto ingresado en el JTextArea
+
+            csDetalle.addBatch();
+        }
+
+        csDetalle.executeBatch();
+        return true;
+
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(vfm, "Error al guardar el detalle en la BDD: " + ex.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
+        return false;
+    }
+}
 }

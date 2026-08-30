@@ -11,16 +11,26 @@ package controlador;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import javax.swing.JOptionPane;
+import vista.VehiculoVista;
 import vista.VistaFacturaMecanica;
 
+
+
 public class VehiculoControlador {
+
     private VistaFacturaMecanica vfm;
     private ArrayList<String[]> listaVehiculos;
+    // Lista paralela para asociar el índice del JComboBox con el ID_cliente real
+    private ArrayList<Integer> listaIdsClientes = new ArrayList<>();
 
     ConexionBDD conectar = new ConexionBDD();
     Connection conectado = (Connection) conectar.conectar();
@@ -28,19 +38,82 @@ public class VehiculoControlador {
     public VehiculoControlador() {}
 
     public VehiculoControlador(VistaFacturaMecanica vfm) {
-        this.vfm = vfm; // <-- IMPORTANTE: Asignar la vista
+        this.vfm = vfm;
 
-        // Listener para detectar cuando el usuario cambia de placa en el JComboBox
+        // Carga los IDs reales de los clientes mediante tu SP al instanciar el controlador
+        cargarIdsClientes();
+
+        // 1. Escuchador para detectar cambio de placa en el JComboBox
         this.vfm.getCmbPlaca().addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int index = vfm.getCmbPlaca().getSelectedIndex();
-                // Solo actualiza si el índice es válido (evita errores al limpiar el combo)
                 if (index >= 0) {
                     actualizarTipoVehiculo(index);
                 }
             }
         });
+
+        // 2. Escuchador para el botón '+' al lado de PLACA
+        this.vfm.getBtnAgregarVehiculo().addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                abrirModalVehiculo();
+            }
+        });
+    }
+
+    // Ejecuta tu Stored Procedure para mapear los IDs reales de la base de datos
+    private void cargarIdsClientes() {
+        listaIdsClientes.clear();
+        String sql = "{CALL sp_obtener_clientes()}";
+
+        try (CallableStatement cs = conectado.prepareCall(sql);
+             ResultSet rs = cs.executeQuery()) {
+
+            while (rs.next()) {
+                // Lee la primera columna de la consulta (que es el ID_cliente)
+                listaIdsClientes.add(rs.getInt(1));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error al obtener lista de clientes mediante SP: " + e.getMessage());
+        }
+    }
+
+    // Método para abrir la ventana de nuevo vehículo vinculada al cliente actual
+    private void abrirModalVehiculo() {
+        int indexCliente = vfm.getCmbCliente().getSelectedIndex();
+
+        if (indexCliente < 0) {
+            JOptionPane.showMessageDialog(
+                vfm,
+                "Por favor seleccione un cliente antes de añadir un vehículo.",
+                "Cliente no seleccionado",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Si por alguna razón la lista de IDs está vacía, la recargamos mediante el SP
+        if (listaIdsClientes.isEmpty()) {
+            cargarIdsClientes();
+        }
+
+        // Obtiene el ID_cliente verdadero correspondiente al ítem seleccionado en el JComboBox
+        int idClienteSeleccionado = listaIdsClientes.get(indexCliente);
+
+        VehiculoVista vistaVehiculo = new VehiculoVista();
+        new MenuVehiculoControlador(vistaVehiculo, idClienteSeleccionado, conectado);
+
+        vistaVehiculo.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                cargarVehiculosPorCliente(idClienteSeleccionado);
+            }
+        });
+
+        vistaVehiculo.setLocationRelativeTo(vfm);
+        vistaVehiculo.setVisible(true);
     }
 
     // Consulta los vehículos desde la BDD mediante el Stored Procedure
@@ -81,15 +154,14 @@ public class VehiculoControlador {
 
         if (this.listaVehiculos != null && !this.listaVehiculos.isEmpty()) {
             for (String[] vehiculo : this.listaVehiculos) {
-                // Guardamos solo la placa para mantener limpia la vista
                 vfm.getCmbPlaca().addItem(vehiculo[0]); 
             }
-            // Selecciona automáticamente el primer vehículo cargado
-            actualizarTipoVehiculo(0);
+            // Selecciona automáticamente la última placa agregada
+            vfm.getCmbPlaca().setSelectedIndex(this.listaVehiculos.size() - 1);
         }
     }
 
-    // Método para activar el RadioButton según el tipo de vehículo (1 = Pesado, 2 = Particular)
+    // Método para activar el RadioButton según el tipo de vehículo
     public void actualizarTipoVehiculo(int index) {
         if (index >= 0 && listaVehiculos != null && index < listaVehiculos.size()) {
             String[] vehiculo = listaVehiculos.get(index);

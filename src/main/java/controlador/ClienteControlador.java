@@ -6,12 +6,17 @@ package controlador;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import javax.swing.JOptionPane;
 import modelo.Cliente;
+import vista.ClienteVista;
+import vista.VehiculoVista;
 import vista.VistaFacturaMecanica;
 
 public class ClienteControlador {
@@ -36,25 +41,49 @@ public class ClienteControlador {
 
         CargarClientes(this.listaClientes);
 
-        this.vfm.getCmbCliente().addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int index = vfm.getCmbCliente().getSelectedIndex();
-                if (index >= 0 && listaClientes != null && !listaClientes.isEmpty()) {
-                    String[] seleccionado = listaClientes.get(index);
+        // 1. Cargar datos del cliente seleccionado en el ComboBox
+        this.vfm.getCmbCliente().addActionListener(e -> {
+            int index = vfm.getCmbCliente().getSelectedIndex();
+            if (index >= 0 && listaClientes != null && !listaClientes.isEmpty()) {
+                String[] seleccionado = listaClientes.get(index);
 
-                    // Mapeo de campos a la vista
-                    vfm.getTxtCedula().setText(seleccionado[2]);    // Posición 2: cedula
-                    vfm.getTxtTelefono().setText(seleccionado[4]);  // Posición 4: celular
-                    vfm.getTxtDireccion().setText(seleccionado[5]); // Posición 5: direccion
-                    vfm.getTxtCorreo().setText(seleccionado[3]);    // Posición 3: email
+                // Mapeo de campos a la vista
+                vfm.getTxtCedula().setText(seleccionado[2]);    // cedula
+                vfm.getTxtTelefono().setText(seleccionado[4]);  // celular
+                vfm.getTxtDireccion().setText(seleccionado[5]); // direccion
+                vfm.getTxtCorreo().setText(seleccionado[3]);    // email
 
-                    // Cargar placas del cliente seleccionado
-                    int idCliente = Integer.parseInt(seleccionado[0]); // Posición 0: ID_cliente
-                    vc.cargarVehiculosPorCliente(idCliente);
-                }
+                // Cargar placas del cliente seleccionado
+                int idCliente = Integer.parseInt(seleccionado[0]); // ID_cliente
+                vc.cargarVehiculosPorCliente(idCliente);
             }
         });
+
+        // 2. Evento para abrir la ventana de registro de cliente nuevo
+        this.vfm.getBtnAgregarCliente().addActionListener(e -> {
+            ClienteVista vistaCliente = new ClienteVista();
+            new MenuClienteControlador(vistaCliente, conectado);
+            
+            // Refrescar el ComboBox automáticamente cuando se cierra la ventana de ClienteVista
+            vistaCliente.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    actualizarListaClientes();
+                }
+            });
+
+            vistaCliente.setLocationRelativeTo(vfm);
+            vistaCliente.setVisible(true);
+        });
+    }
+
+    // Método para refrescar el combo cuando se guarda un nuevo cliente
+    public void actualizarListaClientes() {
+        this.listaClientes = obtenerClientes();
+        CargarClientes(this.listaClientes);
+        if (!this.listaClientes.isEmpty()) {
+            vfm.getCmbCliente().setSelectedIndex(this.listaClientes.size() - 1); // Selecciona el último cliente registrado
+        }
     }
 
     private void limpiarCampos() {
