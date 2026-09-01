@@ -12,6 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import vista.MenuLogin;
+import vista.MenuMecanico;
 import vista.VistaFacturaMecanica;
 import vista.VistaMecanico;
 
@@ -40,40 +41,48 @@ public class LoginControlador {
     }
 
     private void validarIngreso() {
-        String usuario = vl.getTxtUsuario().getText().trim();
-        String clave = new String(vl.getPswContraseña().getPassword()).trim();
+    String usuario = vl.getTxtUsuario().getText().trim();
+    String clave = new String(vl.getPswContraseña().getPassword()).trim();
 
-        if (usuario.isEmpty() || clave.isEmpty()) {
-            JOptionPane.showMessageDialog(vl, "Por favor ingrese usuario y contraseña.", "Atención", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Obtener el rol mediante el Stored Procedure
-        String rolUsuario = autenticarUsuarioSP(usuario, clave);
-
-        if (rolUsuario != null) {
-            JOptionPane.showMessageDialog(vl, "¡Bienvenido! Rol: " + rolUsuario, "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
-
-            // Redirección según el Rol de Usuario
-            if (rolUsuario.equalsIgnoreCase("RECEPCIONISTA")) {
-                VistaFacturaMecanica vfm = new VistaFacturaMecanica();
-                FacturaControlador fc = new FacturaControlador(vfm);
-                vfm.setLocationRelativeTo(null);
-                vfm.setVisible(true);
-            } else if (rolUsuario.equalsIgnoreCase("MECANICO")) {
-                VistaMecanico vm = new VistaMecanico();
-                MecanicoControlador mc = new MecanicoControlador(vm);
-                vm.setLocationRelativeTo(null);
-                vm.setVisible(true);
-            }
-
-            vl.dispose(); // Cierra el Login tras ingresar
-        } else {
-            JOptionPane.showMessageDialog(vl, "Usuario/Contraseña incorrectos o usuario INACTIVO.", "Error de Acceso", JOptionPane.ERROR_MESSAGE);
-        }
+    if (usuario.isEmpty() || clave.isEmpty()) {
+        JOptionPane.showMessageDialog(vl, "Por favor ingrese usuario y contraseña.", "Atención", JOptionPane.WARNING_MESSAGE);
+        return;
     }
 
-    // Consulta al Stored Procedure y retorna el Rol si las credenciales coinciden
+    String rolUsuario = autenticarUsuarioSP(usuario, clave);
+
+    if (rolUsuario != null) {
+        JOptionPane.showMessageDialog(vl, "¡Bienvenido! Rol: " + rolUsuario, "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
+
+        if (rolUsuario.equalsIgnoreCase("RECEPCIONISTA")) {
+            VistaFacturaMecanica vfm = new VistaFacturaMecanica();
+
+            // Instancia de TODOS los controladores para la factura
+            FacturaControlador fc = new FacturaControlador(vfm);
+            VehiculoControlador vc = new VehiculoControlador(vfm);
+            ClienteControlador cc = new ClienteControlador(vfm, vc);
+            DetalleFacturaControlador dfc = new DetalleFacturaControlador(vfm);
+            RepuestoControlador rc = new RepuestoControlador(vfm);
+            MarcaControlador mac = new MarcaControlador(vfm, rc);
+
+            fc.cargarFecha();
+
+            vfm.setLocationRelativeTo(null);
+            vfm.setVisible(true);
+
+        } else if (rolUsuario.equalsIgnoreCase("MECANICO")) {
+            MenuMecanico mm = new MenuMecanico();
+            HistorialTrabajosControlador htc = new HistorialTrabajosControlador(mm);
+            mm.setLocationRelativeTo(null);
+            mm.setVisible(true);
+        }
+
+        vl.dispose();
+    } else {
+        JOptionPane.showMessageDialog(vl, "Usuario/Contraseña incorrectos o usuario INACTIVO.", "Error de Acceso", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
     public String autenticarUsuarioSP(String usuario, String clave) {
         String sql = "{CALL sp_validar_usuario(?, ?)}";
 
@@ -83,7 +92,7 @@ public class LoginControlador {
 
             try (ResultSet rs = cs.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("rol"); // Retorna 'RECEPCIONISTA' o 'MECANICO'
+                    return rs.getString("rol");
                 }
             }
 
@@ -91,6 +100,6 @@ public class LoginControlador {
             System.out.println("Error al ejecutar sp_validar_usuario: " + e.getMessage());
         }
 
-        return null; // Credenciales inválidas
+        return null;
     }
 }

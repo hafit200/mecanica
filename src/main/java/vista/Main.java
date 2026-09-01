@@ -7,6 +7,7 @@ package vista;
 import controlador.ClienteControlador;
 import controlador.DetalleFacturaControlador;
 import controlador.FacturaControlador;
+import controlador.LoginControlador;
 import controlador.MarcaControlador;
 import controlador.MecanicoControlador;
 import controlador.RepuestoControlador;
@@ -17,22 +18,10 @@ import controlador.VehiculoControlador;
  * @author Asus
  */
 public class Main {
-
     public static void main(String[] args) {
-        VistaFacturaMecanica vfm = new VistaFacturaMecanica();
-        
-        FacturaControlador fc = new FacturaControlador(vfm);
-        
-        // Controladores de vehículos y clientes vinculados
-        VehiculoControlador vc = new VehiculoControlador(vfm);
-        ClienteControlador cc = new ClienteControlador(vfm, vc);
-        DetalleFacturaControlador dfc = new DetalleFacturaControlador(vfm);
-        RepuestoControlador rc = new RepuestoControlador(vfm);
-        MarcaControlador mac = new MarcaControlador(vfm, rc);
-
-        fc.cargarFecha();
-
-        vfm.setVisible(true);
-        vfm.setLocationRelativeTo(null);
+        MenuLogin vl = new MenuLogin();
+        LoginControlador lc = new LoginControlador(vl);
+        vl.setLocationRelativeTo(null);
+        vl.setVisible(true);
     }
 }

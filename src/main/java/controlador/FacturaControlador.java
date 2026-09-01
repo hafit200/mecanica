@@ -75,6 +75,16 @@ public class FacturaControlador {
             }
         });
 
+        // EVENTO: Detecta cambios en el RadioButton de tipo de vehículo (Pesado/Particular)
+        ActionListener listenerTipoVehiculo = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                calcularYMostrarTotalRepuestos();
+            }
+        };
+        this.vfm.getRbtPesado().addActionListener(listenerTipoVehiculo);
+        this.vfm.getRbtParticular().addActionListener(listenerTipoVehiculo);
+
         // EVENTO: Escucha cambios en la JTable de repuestos para actualizar txtTotal automáticamente
         DefaultTableModel modeloTabla = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
         modeloTabla.addTableModelListener(new TableModelListener() {
@@ -85,7 +95,7 @@ public class FacturaControlador {
         });
     }
 
-    // Calcula el total de los repuestos sumando los valores de la JTable
+    // Calcula el total de los repuestos sumando los valores de la JTable + Recargo por vehículo pesado
     public double calcularYMostrarTotalRepuestos() {
         double totalRepuestos = 0.0;
         DefaultTableModel modelo = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
@@ -102,12 +112,22 @@ public class FacturaControlador {
             }
         }
 
-        // Refresca el campo txtTotal de la vista principal
-        if (vfm.getTxtTotal() != null) {
-            vfm.getTxtTotal().setText(String.format("%.2f", totalRepuestos));
+        // CÁLCULO DEL RECARGO
+        double recargo = 0.0;
+        if (vfm.getRbtPesado().isSelected()) {
+            // Ajusta el porcentaje según las reglas de tu negocio (ejemplo: 15% = 0.15)
+            double PORCENTAJE_RECARGO = 0.15;
+            recargo = totalRepuestos * PORCENTAJE_RECARGO;
         }
 
-        return totalRepuestos;
+        double totalFinal = totalRepuestos + recargo;
+
+        // Refresca el campo txtTotal de la vista principal
+        if (vfm.getTxtTotal() != null) {
+            vfm.getTxtTotal().setText(String.format("%.2f", totalFinal).replace(",", "."));
+        }
+
+        return totalFinal;
     }
 
     // Método auxiliar para consultar la marca y el modelo del vehículo por su placa
@@ -124,6 +144,20 @@ public class FacturaControlador {
 
                 vfm.getTxtMarca().setText(marca);
                 vfm.getTxtModelo().setText(modelo);
+
+                // Si en el procedimiento almacenado retornas la columna 'tipo' o 'es_pesado'
+                try {
+                    String tipoVehiculo = rs.getString("tipo"); // O el nombre de tu columna en la BDD
+                    if (tipoVehiculo != null && tipoVehiculo.equalsIgnoreCase("PESADO")) {
+                        vfm.getRbtPesado().setSelected(true);
+                    } else {
+                        vfm.getRbtParticular().setSelected(true);
+                    }
+                } catch (SQLException ex) {
+                    // Si no existe la columna en el resultset simplemente recalcula
+                }
+
+                calcularYMostrarTotalRepuestos();
             } else {
                 vfm.getTxtMarca().setText("NA");
                 vfm.getTxtModelo().setText("NA");
@@ -183,17 +217,24 @@ public class FacturaControlador {
             return;
         }
 
-        // 3. Guardar repuestos y abrir ventana de Mecánico enviándole idOrden Y el subtotal de repuestos
+        // 3. Guardar repuestos, generar PDF y abrir ventana de Mecánico
         if (idOrdenGenerado > 0) {
             DetalleFacturaControlador detalleCtrl = new DetalleFacturaControlador(vfm);
             boolean repuestosGuardados = detalleCtrl.guardarDetalles(idOrdenGenerado, detalleServicio);
 
             if (repuestosGuardados) {
-                double totalRepuestos = calcularYMostrarTotalRepuestos();
+                double totalFinalConRecargo = calcularYMostrarTotalRepuestos();
 
-                // Abrir ventana del Mecánico PASÁNDOLE el idOrdenGenerado y totalRepuestos
+                // =========================================================================
+                // GENERACIÓN DEL DOCUMENTO PDF
+                // =========================================================================
+                PdfGenerador pdfGenerador = new PdfGenerador();
+                pdfGenerador.generarPdfFactura(idOrdenGenerado, placa, detalleServicio, vfm.getTblDetalleFactura(), totalFinalConRecargo);
+                // =========================================================================
+
+                // Abrir ventana del Mecánico
                 VistaMecanico vm = new VistaMecanico();
-                MecanicoControlador mc = new MecanicoControlador(vm, idOrdenGenerado, totalRepuestos);
+                MecanicoControlador mc = new MecanicoControlador(vm, idOrdenGenerado, totalFinalConRecargo);
 
                 vm.setLocationRelativeTo(vfm);
                 vm.setVisible(true);
@@ -242,6 +283,8 @@ public class FacturaControlador {
 
         DefaultTableModel modelo = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
         modelo.setRowCount(0);
+
+        vfm.getRbtParticular().setSelected(true); // Se marca Particular por defecto al limpiar
 
         cargarFecha();
         cargarSiguienteNumeroOrden();

@@ -86,14 +86,19 @@ public class HistorialTrabajosControlador {
     }
 
     private void cargarHistorialTrabajos(String placa) {
-        // Modelo adaptado a tus 4 columnas exactas de la interfaz
-        DefaultTableModel modelo = new DefaultTableModel();
+        // Modelo con edición deshabilitada
+        DefaultTableModel modelo = new DefaultTableModel() {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Bloquea la edición directa en la tabla
+            }
+        };
+
         modelo.addColumn("N° ORDEN");
         modelo.addColumn("FECHA");
         modelo.addColumn("DETALLE");
         modelo.addColumn("MECANICO");
 
-        // Llamada al nuevo Stored Procedure
         String sql = "{CALL sp_obtener_detalles_anteriores(?)}";
 
         try (CallableStatement cs = conectado.prepareCall(sql)) {
@@ -110,7 +115,7 @@ public class HistorialTrabajosControlador {
                 modelo.addRow(fila);
             }
 
-            vista.getTblTrabajos().setModel(modelo); // Asigna los datos a la tabla de la vista
+            vista.getTblTrabajos().setModel(modelo);
 
         } catch (SQLException e) {
             System.out.println("Error al obtener el historial por placa: " + e.getMessage());
