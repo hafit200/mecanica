@@ -38,8 +38,25 @@ public class MenuClienteControlador {
         String celular = vistaCliente.getTxtTelefono().getText().trim();
         String direccion = vistaCliente.getTxtDIreccion().getText().trim();
 
+        // 1. Validación de campos requeridos
         if (nombre.isEmpty() || cedula.isEmpty()) {
-            JOptionPane.showMessageDialog(vistaCliente, "El nombre y la cédula son obligatorios.");
+            JOptionPane.showMessageDialog(
+                    vistaCliente, 
+                    "El nombre y la cédula son obligatorios.", 
+                    "Campos incompletos", 
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // 2. Validación de Cédula Ecuatoriana usando esCedulaValida()
+        if (!esCedulaValida(cedula)) {
+            JOptionPane.showMessageDialog(
+                    vistaCliente, 
+                    "La cédula ingresada no es válida. Por favor, verifíquela.", 
+                    "Cédula Inválida", 
+                    JOptionPane.ERROR_MESSAGE
+            );
             return;
         }
 
@@ -81,5 +98,52 @@ public class MenuClienteControlador {
                     JOptionPane.ERROR_MESSAGE
             );
         }
+    }
+
+    public static boolean esCedulaValida(String cedula) {
+        // 1. Longitud exacta de 10 dígitos numéricos
+        if (cedula == null || !cedula.matches("\\d{10}")) {
+            return false;
+        }
+
+        // 2. Provincia válida (01 a 24, o 30 para ecuatorianos en el exterior)
+        int provincia = Integer.parseInt(cedula.substring(0, 2));
+        if ((provincia < 1 || provincia > 24) && provincia != 30) {
+            return false;
+        }
+
+        // 3. Tercer dígito menor a 6 (personas naturales)
+        int tercerDigito = Character.getNumericValue(cedula.charAt(2));
+        if (tercerDigito >= 6) {
+            return false;
+        }
+
+        // 4. Algoritmo Módulo 10 (multiplicación por coeficientes 2 y 1)
+        int[] coeficientes = {2, 1, 2, 1, 2, 1, 2, 1, 2};
+        int suma = 0;
+
+        for (int i = 0; i < 9; i++) {
+            int digito = Character.getNumericValue(cedula.charAt(i));
+            int producto = digito * coeficientes[i];
+
+            if (producto >= 10) {
+                producto -= 9;
+            }
+
+            suma += producto;
+        }
+
+        // 5. Cálculo del dígito verificador esperado
+        int decenaSuperior = (int) Math.ceil((double) suma / 10) * 10;
+        int digitoVerificadorEsperado = decenaSuperior - suma;
+
+        if (digitoVerificadorEsperado == 10) {
+            digitoVerificadorEsperado = 0;
+        }
+
+        // 6. Comparación con el décimo dígito
+        int digitoVerificadorReal = Character.getNumericValue(cedula.charAt(9));
+
+        return digitoVerificadorEsperado == digitoVerificadorReal;
     }
 }

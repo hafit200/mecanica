@@ -17,11 +17,18 @@ import com.itextpdf.text.pdf.PdfWriter;
 import java.io.File;
 
 import java.io.FileOutputStream;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.time.LocalDate;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 
 public class PdfGenerador {
+
+    private ConexionBDD conectar = new ConexionBDD();
 
     public void generarPdfFactura(int idOrden, String placa, String servicio, JTable tablaRepuestos, double totalFinalConRecargo) {
         String carpetaDestino = "C:\\Users\\Asus\\Documents\\PdfFacturas";
@@ -54,12 +61,57 @@ public class PdfGenerador {
             documento.add(numOrden);
             documento.add(new Paragraph(" "));
 
-            // 2. Información General
+            // 2. Consulta de los datos reales cruzando las tablas según la estructura exacta de la BD
+            String fechaActual = LocalDate.now().toString();
+            String nombreCliente = "N/A";
+            String cedulaCliente = "N/A";
+            String marcaModelo = "N/A";
+            String tipoVehiculo = "N/A";
+
+            String sql = "SELECT c.nombre, c.cedula, m.nombre AS marca, v.modelo, t.tipo " +
+                         "FROM vehiculos v " +
+                         "INNER JOIN clientes c ON v.ID_cliente = c.ID_cliente " +
+                         "LEFT JOIN marcas m ON v.ID_marca = m.ID_marca " +
+                         "LEFT JOIN tipo_de_vehiculo t ON v.ID_tipo_vehiculo = t.ID_tipo_vehiculo " +
+                         "WHERE v.Placa_vehiculo = ?";
+
+            try (Connection conn = (Connection) conectar.conectar();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                
+                ps.setString(1, placa);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        nombreCliente = rs.getString("nombre") != null ? rs.getString("nombre") : "N/A";
+                        cedulaCliente = rs.getString("cedula") != null ? rs.getString("cedula") : "N/A";
+                        
+                        String marca = rs.getString("marca") != null ? rs.getString("marca") : "";
+                        String modelo = rs.getString("modelo") != null ? rs.getString("modelo") : "";
+                        marcaModelo = (marca + " " + modelo).trim();
+                        if (marcaModelo.isEmpty()) marcaModelo = "N/A";
+                        
+                        tipoVehiculo = rs.getString("tipo") != null ? rs.getString("tipo") : "N/A";
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Error al consultar datos del cliente/vehículo: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // Construcción de la sección de Información
             PdfPTable tablaInfo = new PdfPTable(2);
             tablaInfo.setWidthPercentage(100);
 
+            tablaInfo.addCell(crearCelda("Fecha: " + fechaActual, textoFont, false));
+            tablaInfo.addCell(crearCelda("Cliente: " + nombreCliente, textoFont, false));
+            
+            tablaInfo.addCell(crearCelda("Cédula/RUC: " + cedulaCliente, textoFont, false));
             tablaInfo.addCell(crearCelda("Placa: " + placa, textoFont, false));
+            
+            tablaInfo.addCell(crearCelda("Marca/Modelo: " + marcaModelo, textoFont, false));
+            tablaInfo.addCell(crearCelda("Tipo Vehículo: " + tipoVehiculo, textoFont, false));
+            
             tablaInfo.addCell(crearCelda("Servicio: " + servicio, textoFont, false));
+            tablaInfo.addCell(crearCelda("", textoFont, false));
 
             documento.add(tablaInfo);
             documento.add(new Paragraph(" "));
@@ -108,7 +160,7 @@ public class PdfGenerador {
             documento.add(tablaDetalle);
             documento.add(new Paragraph(" "));
 
-            // 4. Seccion Totales (Subtotal, Recargo y Total Final)
+            // 4. Sección Totales (Subtotal, Recargo y Total Final)
             double valorRecargo = totalFinalConRecargo - subtotalGeneral;
 
             PdfPTable tablaTotales = new PdfPTable(2);
@@ -119,9 +171,9 @@ public class PdfGenerador {
             tablaTotales.addCell(crearCelda("Subtotal:", subtituloFont, false));
             tablaTotales.addCell(crearCeldaDer("$ " + String.format("%.2f", subtotalGeneral), textoFont));
 
-            // Recargo (solo si existe diferencia superior a 1 centavo)
+            // Recargo
             if (valorRecargo > 0.01) {
-                tablaTotales.addCell(crearCelda("Recargo (Pesado):", subtituloFont, false));
+                tablaTotales.addCell(crearCelda("Recargo (" + tipoVehiculo + "):", subtituloFont, false));
                 tablaTotales.addCell(crearCeldaDer("$ " + String.format("%.2f", valorRecargo), textoFont));
             }
 
