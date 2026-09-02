@@ -84,6 +84,7 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
         jLabel13 = new javax.swing.JLabel();
         txtTotal = new javax.swing.JTextField();
         jLabel14 = new javax.swing.JLabel();
+        btnGenerarReporte = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -97,7 +98,7 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
 
         txtCedula.setEditable(false);
 
-        lblCedula.setText("CEDULA");
+        lblCedula.setText("CÉDULA");
 
         jLabel2.setText("CLIENTE");
 
@@ -130,7 +131,7 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
         lblPlaca.setText("PLACA");
 
         jLabel6.setFont(new java.awt.Font("Segoe UI Black", 1, 14)); // NOI18N
-        jLabel6.setText("SISTEMA DE FACTURACIÓN MECANICA");
+        jLabel6.setText("SISTEMA DE FACTURACIÓN MECÁNICA");
 
         jLabel7.setText("N°");
 
@@ -141,7 +142,7 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
 
         txtCorreo.setEditable(false);
 
-        jLabel8.setText("TELEFONO");
+        jLabel8.setText("TELÉFONO");
 
         txtTelefono.setEditable(false);
 
@@ -167,12 +168,12 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
         cmbPlaca.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "S.C" }));
 
         TipoVehiculos.add(rbtPesado);
-        rbtPesado.setText("Vehiculo Pesado");
+        rbtPesado.setText("Vehículo Pesado");
         rbtPesado.setEnabled(false);
         rbtPesado.addActionListener(this::rbtPesadoActionPerformed);
 
         TipoVehiculos.add(rbtParticular);
-        rbtParticular.setText("Vehiculo Particular");
+        rbtParticular.setText("Vehículo Particular");
         rbtParticular.setEnabled(false);
 
         txtaDetalleServicio.setColumns(20);
@@ -181,7 +182,7 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
         txtaDetalleServicio.setWrapStyleWord(true);
         jScrollPane1.setViewportView(txtaDetalleServicio);
 
-        jLabel10.setText("TIPO DE VEHICULO");
+        jLabel10.setText("TIPO DE VEHÍCULO");
 
         btnGuardar.setText("GENERAR FACTURA");
 
@@ -198,6 +199,8 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
         txtTotal.setEditable(false);
 
         jLabel14.setText("TOTAL REPUESTOS:");
+
+        btnGenerarReporte.setText("GENERAR REPORTE");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -317,10 +320,13 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
                             .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 316, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGap(134, 134, 134))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addGroup(layout.createSequentialGroup()
+                                .addGap(6, 6, 6)
+                                .addComponent(btnGenerarReporte)
+                                .addGap(29, 29, 29)
                                 .addComponent(btnGuardar)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(jLabel14)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(txtTotal, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -400,7 +406,8 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnGuardar)
                     .addComponent(txtTotal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel14))
+                    .addComponent(jLabel14)
+                    .addComponent(btnGenerarReporte))
                 .addGap(26, 26, 26))
         );
 
@@ -638,6 +645,14 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
     public void setTxtTotal(JTextField txtTotal) {
         this.txtTotal = txtTotal;
     }
+
+    public JButton getBtnGenerarReporte() {
+        return btnGenerarReporte;
+    }
+
+    public void setBtnGenerarReporte(JButton btnGenerarReporte) {
+        this.btnGenerarReporte = btnGenerarReporte;
+    }
     
 
     
@@ -647,6 +662,7 @@ public class VistaFacturaMecanica extends javax.swing.JFrame {
     private javax.swing.JButton btnAgregar;
     private javax.swing.JButton btnAgregarCliente;
     private javax.swing.JButton btnAgregarVehiculo;
+    private javax.swing.JButton btnGenerarReporte;
     private javax.swing.JButton btnGuardar;
     private javax.swing.JComboBox<String> cmbCliente;
     private javax.swing.JComboBox<String> cmbMarca;

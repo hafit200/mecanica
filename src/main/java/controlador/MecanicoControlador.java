@@ -16,6 +16,7 @@ import modelo.Mecanico;
 import vista.VistaMecanico;
 
 public class MecanicoControlador {
+
     private Mecanico m;
     private VistaMecanico vm;
     private ArrayList<String[]> listaMecanicos;
@@ -71,54 +72,51 @@ public class MecanicoControlador {
 
     private void guardarAsignacionMecanico() {
         int index = vm.getCmbMecanico().getSelectedIndex();
-        int horas = (int) vm.getSpnHorasTrabajo().getValue();
-        String nivel = (String) vm.getCmbNivelTrabajo().getSelectedItem();
-        String subtotalStr = vm.getTxtSubtotalMecanico().getText().replace(",", ".");
 
         if (index < 0 || listaMecanicos == null || listaMecanicos.isEmpty()) {
             JOptionPane.showMessageDialog(vm, "Debe seleccionar un mecánico válido.", "Atención", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        int horas = (int) vm.getSpnHorasTrabajo().getValue();
         if (horas <= 0) {
             JOptionPane.showMessageDialog(vm, "Las horas de trabajo deben ser mayores a cero.", "Atención", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        String nivel = (String) vm.getCmbNivelTrabajo().getSelectedItem();
+        String subtotalStr = vm.getTxtSubtotalMecanico().getText().replace(",", ".");
+
+        // OBTIENE EL ARREGLO COMPLETO SEGÚN LA POSICIÓN SELECCIONADA
         String[] mecanicoSeleccionado = listaMecanicos.get(index);
+
+        // EXTRAE LA POSICIÓN 0 (ID_mecanico REAL DE LA BDD)
         int idMecanico = Integer.parseInt(mecanicoSeleccionado[0]);
         double subtotalManoObra = Double.parseDouble(subtotalStr);
 
-        // 1. Guardar detalle del mecánico mediante SP
+        // Muestra en consola para verificar qué ID se enviará antes de ejecutar la SQL
+        System.out.println("ID Orden: " + this.idOrdenActual + " | ID Mecánico Real a Guardar: " + idMecanico);
+
+        // 1. Guardar en la BDD
         boolean guardadoExitoso = guardarDetalleMecanico(this.idOrdenActual, idMecanico, horas, nivel, subtotalManoObra);
 
         if (guardadoExitoso) {
-            // 2. Calcular Total General
             double totalGeneral = this.totalRepuestos + subtotalManoObra;
-
-            // 3. Actualizar el campo 'total' en orden_de_trabajo MEDIANTE STORED PROCEDURE
             actualizarTotalOrdenSP(this.idOrdenActual, totalGeneral);
 
-            // 4. Mostrar JOptionPane con el desglose final
             String mensajeFinal = String.format(
-                " ORDEN N° %06d FINALIZADA CON ÉXITO \n" +
-                "-------------------------------------------\n" +
-                " Mecánico Asignado: %s\n" +
-                " Subtotal Repuestos: $%.2f\n" +
-                " Mano de Obra:       $%.2f\n" +
-                "-------------------------------------------\n" +
-                " TOTAL GENERAL:      $%.2f",
-                this.idOrdenActual, mecanicoSeleccionado[1], this.totalRepuestos, subtotalManoObra, totalGeneral
+                    " ORDEN N° %06d FINALIZADA CON ÉXITO \n"
+                    + "-------------------------------------------\n"
+                    + " Mecánico: %s (ID: %d)\n"
+                    + " Total Repuestos: $%.2f\n"
+                    + " Mano de Obra:    $%.2f\n"
+                    + "-------------------------------------------\n"
+                    + " TOTAL GENERAL:   $%.2f",
+                    this.idOrdenActual, mecanicoSeleccionado[1], idMecanico, this.totalRepuestos, subtotalManoObra, totalGeneral
             );
 
-            JOptionPane.showMessageDialog(
-                vm, 
-                mensajeFinal, 
-                "Resumen General de la Orden", 
-                JOptionPane.INFORMATION_MESSAGE
-            );
-
-            vm.dispose(); // Cierra el modal del mecánico
+            JOptionPane.showMessageDialog(vm, mensajeFinal, "Resumen General", JOptionPane.INFORMATION_MESSAGE);
+            vm.dispose();
         } else {
             JOptionPane.showMessageDialog(vm, "Error al asociar el mecánico a la orden.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -167,11 +165,21 @@ public class MecanicoControlador {
 
             if (nivel != null) {
                 switch (nivel.toUpperCase()) {
-                    case "NIVEL 1": tarifaHora = 10.0; break;
-                    case "NIVEL 2": tarifaHora = 15.0; break;
-                    case "NIVEL 3": tarifaHora = 20.0; break;
-                    case "NIVEL 4": tarifaHora = 25.0; break;
-                    default: tarifaHora = 0.0; break;
+                    case "NIVEL 1":
+                        tarifaHora = 10.0;
+                        break;
+                    case "NIVEL 2":
+                        tarifaHora = 15.0;
+                        break;
+                    case "NIVEL 3":
+                        tarifaHora = 20.0;
+                        break;
+                    case "NIVEL 4":
+                        tarifaHora = 25.0;
+                        break;
+                    default:
+                        tarifaHora = 0.0;
+                        break;
                 }
             }
 
@@ -187,8 +195,7 @@ public class MecanicoControlador {
         ArrayList<String[]> lregistros = new ArrayList<>();
         String sentenciaSQL = "{CALL sp_obtener_mecanicos()}";
 
-        try (CallableStatement ejecutar = conectado.prepareCall(sentenciaSQL);
-             ResultSet res = ejecutar.executeQuery()) {
+        try (CallableStatement ejecutar = conectado.prepareCall(sentenciaSQL); ResultSet res = ejecutar.executeQuery()) {
 
             while (res.next()) {
                 String[] mecanico = new String[4];

@@ -18,6 +18,7 @@ import javax.swing.table.DefaultTableModel;
 import modelo.Factura;
 import vista.VistaFacturaMecanica;
 import vista.VistaMecanico;
+import vista.VistaReportes;
 
 /**
  *
@@ -59,6 +60,22 @@ public class FacturaControlador {
                 guardarFacturaYAbrirMecanico();
             }
         });
+
+        // =========================================================================
+        // EVENTO: Abrir ventana de Reportes al presionar btnGenerarReporte
+        // =========================================================================
+        if (this.vfm.getBtnGenerarReporte() != null) {
+            this.vfm.getBtnGenerarReporte().addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    VistaReportes vr = new VistaReportes();
+                    ReporteControlador rc = new ReporteControlador(vr); // Conecta controlador y llena datos
+                    vr.setLocationRelativeTo(vfm);
+                    vr.setVisible(true);
+                }
+            });
+        }
+        // =========================================================================
 
         // EVENTO: Detecta el cambio en el ComboBox de la Placa para cargar Marca y Modelo
         this.vfm.getCmbPlaca().addActionListener(new ActionListener() {
@@ -115,7 +132,6 @@ public class FacturaControlador {
         // CÁLCULO DEL RECARGO
         double recargo = 0.0;
         if (vfm.getRbtPesado().isSelected()) {
-            // Ajusta el porcentaje según las reglas de tu negocio (ejemplo: 15% = 0.15)
             double PORCENTAJE_RECARGO = 0.15;
             recargo = totalRepuestos * PORCENTAJE_RECARGO;
         }
@@ -145,9 +161,8 @@ public class FacturaControlador {
                 vfm.getTxtMarca().setText(marca);
                 vfm.getTxtModelo().setText(modelo);
 
-                // Si en el procedimiento almacenado retornas la columna 'tipo' o 'es_pesado'
                 try {
-                    String tipoVehiculo = rs.getString("tipo"); // O el nombre de tu columna en la BDD
+                    String tipoVehiculo = rs.getString("tipo");
                     if (tipoVehiculo != null && tipoVehiculo.equalsIgnoreCase("PESADO")) {
                         vfm.getRbtPesado().setSelected(true);
                     } else {
@@ -171,7 +186,6 @@ public class FacturaControlador {
     }
 
     private void guardarFacturaYAbrirMecanico() {
-        // 1. Validaciones previas de campos obligatorios
         if (vfm.getTxtNumeroFactura().getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(vfm, "No hay un número de orden válido.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
@@ -196,7 +210,6 @@ public class FacturaControlador {
             return;
         }
 
-        // 2. Guardar la Cabecera (orden_de_trabajo) y obtener el ID autogenerado
         int idOrdenGenerado = -1;
         String sqlCabecera = "{CALL sp_guardar_orden_trabajo(?, ?, ?, ?, ?)}";
 
@@ -217,7 +230,6 @@ public class FacturaControlador {
             return;
         }
 
-        // 3. Guardar repuestos, generar PDF y abrir ventana de Mecánico
         if (idOrdenGenerado > 0) {
             DetalleFacturaControlador detalleCtrl = new DetalleFacturaControlador(vfm);
             boolean repuestosGuardados = detalleCtrl.guardarDetalles(idOrdenGenerado, detalleServicio);
@@ -225,21 +237,15 @@ public class FacturaControlador {
             if (repuestosGuardados) {
                 double totalFinalConRecargo = calcularYMostrarTotalRepuestos();
 
-                // =========================================================================
-                // GENERACIÓN DEL DOCUMENTO PDF
-                // =========================================================================
                 PdfGenerador pdfGenerador = new PdfGenerador();
                 pdfGenerador.generarPdfFactura(idOrdenGenerado, placa, detalleServicio, vfm.getTblDetalleFactura(), totalFinalConRecargo);
-                // =========================================================================
 
-                // Abrir ventana del Mecánico
                 VistaMecanico vm = new VistaMecanico();
                 MecanicoControlador mc = new MecanicoControlador(vm, idOrdenGenerado, totalFinalConRecargo);
 
                 vm.setLocationRelativeTo(vfm);
                 vm.setVisible(true);
 
-                // Reiniciar el formulario principal
                 reiniciarFormulario();
             }
         } else {
@@ -284,7 +290,7 @@ public class FacturaControlador {
         DefaultTableModel modelo = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
         modelo.setRowCount(0);
 
-        vfm.getRbtParticular().setSelected(true); // Se marca Particular por defecto al limpiar
+        vfm.getRbtParticular().setSelected(true);
 
         cargarFecha();
         cargarSiguienteNumeroOrden();

@@ -8,6 +8,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
@@ -63,7 +65,7 @@ public class DetalleFacturaControlador {
             String precioText = vfm.getTxtPrecio().getText().trim();
             
             if (!precioText.isEmpty()) {
-                double precioUnitario = Double.parseDouble(precioText);
+                double precioUnitario = Double.parseDouble(precioText.replace(",", "."));
                 int cantidad = (int) vfm.getSpnCantidad().getValue();
 
                 double subtotalRepuesto = precioUnitario * cantidad;
@@ -76,7 +78,7 @@ public class DetalleFacturaControlador {
         }
     }
 
-    // Agrega el item a la JTable al hacer clic en btnAgregar
+    // Agrega el item a la JTable (4 columnas estándar de la UI)
     private void agregarRepuestoATabla() {
         try {
             String repuesto = (String) vfm.getCmbRepuesto().getSelectedItem();
@@ -84,7 +86,7 @@ public class DetalleFacturaControlador {
             int cantidad = (int) vfm.getSpnCantidad().getValue();
             String subtotal = vfm.getTxtSubtotal().getText().trim();
 
-            if (repuesto == null || repuesto.isEmpty() || repuesto.contains("SELEACCIONE")) {
+            if (repuesto == null || repuesto.isEmpty() || repuesto.toUpperCase().contains("SELEACCIONE")) {
                 JOptionPane.showMessageDialog(vfm, "Seleccione un repuesto válido.");
                 return;
             }
@@ -94,15 +96,14 @@ public class DetalleFacturaControlador {
                 return;
             }
 
-            // Modelo de la tabla de la vista principal
             DefaultTableModel modelo = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
 
-            // Insertar fila
+            // Insertar exactamente 4 columnas para no descuadrar la vista
             Object[] fila = new Object[]{
-                repuesto,
-                precioU,
-                cantidad,
-                subtotal
+                repuesto, // Columna 0: Nombre
+                precioU,  // Columna 1: Precio Unitario
+                cantidad, // Columna 2: Cantidad
+                subtotal  // Columna 3: Subtotal
             };
             modelo.addRow(fila);
 
@@ -115,38 +116,60 @@ public class DetalleFacturaControlador {
         }
     }
 
-    // --- MÉTODO PARA GUARDAR LOS DETALLES DE LA TABLA EN LA BDD ---
+    // --- MÉTODO PARA GUARDAR LOS DETALLES EN LA BDD ---
     public boolean guardarDetalles(int idOrdenGenerado, String detalleServicio) {
-    DefaultTableModel modeloTabla = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
+        DefaultTableModel modeloTabla = (DefaultTableModel) vfm.getTblDetalleFactura().getModel();
 
-    if (modeloTabla.getRowCount() == 0) {
-        JOptionPane.showMessageDialog(vfm, "Debe agregar al menos un repuesto a la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
-        return false;
-    }
-
-    String sqlDetalle = "{CALL sp_guardar_detalle_orden(?, ?, ?, ?, ?)}";
-
-    try (CallableStatement csDetalle = conectado.prepareCall(sqlDetalle)) {
-        for (int i = 0; i < modeloTabla.getRowCount(); i++) {
-            int idRepuesto = 1; // Ajusta según obtengas el ID real del repuesto
-            int cantidad = Integer.parseInt(modeloTabla.getValueAt(i, 2).toString());
-            double subtotal = Double.parseDouble(modeloTabla.getValueAt(i, 3).toString().replace(",", "."));
-
-            csDetalle.setInt(1, idOrdenGenerado);
-            csDetalle.setInt(2, idRepuesto);
-            csDetalle.setInt(3, cantidad);
-            csDetalle.setDouble(4, subtotal);
-            csDetalle.setString(5, detalleServicio); // Envía el texto ingresado en el JTextArea
-
-            csDetalle.addBatch();
+        if (modeloTabla.getRowCount() == 0) {
+            JOptionPane.showMessageDialog(vfm, "Debe agregar al menos un repuesto a la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return false;
         }
 
-        csDetalle.executeBatch();
-        return true;
+        String sqlDetalle = "{CALL sp_guardar_detalle_orden(?, ?, ?, ?, ?)}";
 
-    } catch (SQLException ex) {
-        JOptionPane.showMessageDialog(vfm, "Error al guardar el detalle en la BDD: " + ex.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
-        return false;
+        try (CallableStatement csDetalle = conectado.prepareCall(sqlDetalle)) {
+            for (int i = 0; i < modeloTabla.getRowCount(); i++) {
+                
+                // Mapeo seguro utilizando los índices exactos (0 a 3)
+                String nombreRepuesto = modeloTabla.getValueAt(i, 0).toString();
+                int cantidad = Integer.parseInt(modeloTabla.getValueAt(i, 2).toString());
+                double subtotal = Double.parseDouble(modeloTabla.getValueAt(i, 3).toString().replace(",", "."));
+
+                // Obtenemos el ID real correspondiente al nombre del repuesto
+                int idRepuesto = obtenerIdPorNombreRepuesto(nombreRepuesto);
+
+                csDetalle.setInt(1, idOrdenGenerado);
+                csDetalle.setInt(2, idRepuesto);
+                csDetalle.setInt(3, cantidad);
+                csDetalle.setDouble(4, subtotal);
+                csDetalle.setString(5, detalleServicio);
+
+                csDetalle.addBatch();
+            }
+
+            csDetalle.executeBatch();
+            return true;
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(vfm, "Error al guardar el detalle en la BDD: " + ex.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
     }
-}
+
+    // Búsqueda dinámica del ID del repuesto en la BDD
+    private int obtenerIdPorNombreRepuesto(String nombreRepuesto) {
+        int id = 1;
+        String sql = "SELECT ID_repuestos FROM repuestos WHERE nombre = ? LIMIT 1";
+        try (PreparedStatement ps = conectado.prepareStatement(sql)) {
+            ps.setString(1, nombreRepuesto);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    id = rs.getInt("ID_repuestos");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error al buscar ID del repuesto: " + e.getMessage());
+        }
+        return id;
+    }
 }
